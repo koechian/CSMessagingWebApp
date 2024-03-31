@@ -133,8 +133,8 @@ function page() {
         id="rightPane"
       >
         <div id="TopPanel">
-          <div id="contactInfo" className="flex flex-row items-center p-4">
-            <div className="rounded-xl">
+          <div id="contactInfo" className="grid grid-cols-3 items-center p-4">
+            <div className="rounded-xl col-span-2 flex flex-row">
               <Image
                 className="mr-5"
                 src="/krusha.png"
@@ -142,8 +142,7 @@ function page() {
                 width={56}
                 alt="User Profile Image"
               ></Image>
-            </div>
-            <div>
+
               <div>
                 <span className={["text-xl font-bold"].join("")}>
                   Grusha Vashnadze
@@ -152,6 +151,15 @@ function page() {
                 <span className="font-semibold opacity-70">
                   @more_sender_info
                 </span>
+              </div>
+            </div>
+            <div className="w-full h-full grid place-items-center">
+              <div
+                className=" bg-red-400 w-2/6 h-5/6 rounded-xl grid grid-cols-3 items-center"
+                id="Pill showing number of available agents"
+              >
+                <div className="w-3 h-3 bg-black rounded-full self-center place-self-end mr-2"></div>
+                <span className="font-bold col-span-2">4 Agents</span>
               </div>
             </div>
           </div>
