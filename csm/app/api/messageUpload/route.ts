@@ -19,5 +19,5 @@ export async function POST(request: Request) {
     console.error("Error adding document: ", e);
   }
 
-  return new Response("Still Testing", { status: 200 });
+  return new Response("All Messages have been uploaded", { status: 200 });
 }
