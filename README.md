@@ -11,7 +11,7 @@ A messaging web application built as a take away assignment for Branch Internati
   `uuid:Unique Agent Identification`,\
   `isOccupied:A boolean to indicate weather the agent is free or not`
 - Agents can be attached to one or many conversations, to a maximum of 3.
-- Agents are destroyed on logout. Meaning they are no longer available for conversations. The messages that they sent will persist.
+- Agents are destroyed on logout. Meaning they are no longer available for conversations. The messages that they sent will persist in the `Conversations` collection for non-repudiation.
 
 ### 2. Messaging
 
