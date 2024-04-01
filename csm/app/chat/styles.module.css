@@ -31,3 +31,26 @@
     height: 0;
   }
 }
+
+.glow {
+  width: 10px;
+  height: 10px;
+  background-color: green;
+  border-radius: 100%;
+  color: #fff;
+  text-align: center;
+  -webkit-animation: glow 1s ease-in-out infinite alternate;
+  -moz-animation: glow 1s ease-in-out infinite alternate;
+  animation: glow 1s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 2px #56dc6e, 0 0 4px #56dc6e, 0 0 6px #2acb47,
+      0 0 8px #2acb47, 0 0 10px #2acb47, 0 0 12px #2acb47, 0 0 14px #2acb47;
+  }
+  to {
+    box-shadow: 0 0 3px #56dc6e, 0 0 6px #187729, 0 0 9px #187729,
+      0 0 12px #187729, 0 0 15px #187729, 0 0 18px #187729, 0 0 21px #187729;
+  }
+}

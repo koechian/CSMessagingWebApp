@@ -16,9 +16,8 @@ import MessageCard from "../components/MessageCard";
 import { redirect } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useCollectionData } from "react-firebase-hooks/firestore";
-import { app, firestore } from "../api/configs/firebaseconfig";
+import { firestore } from "../api/configs/firebaseconfig";
 import {
-  addDoc,
   arrayUnion,
   collection,
   deleteDoc,
@@ -55,6 +54,10 @@ function page() {
   );
 
   const [messages] = useCollectionData(q);
+
+  const q3 = query(collection(firestore, "agents"));
+
+  const [agentsCount] = useCollectionData(q3);
 
   useEffect(() => {
     if (!sessionStorage.getItem("UUID")) {
@@ -390,12 +393,11 @@ function page() {
               </div>
             </div>
             <div className="w-full h-full grid place-items-center">
-              <div
-                className=" bg-red-400 w-2/6 h-5/6 rounded-xl grid grid-cols-3 items-center"
-                id="Pill showing number of available agents"
-              >
-                <div className="w-3 h-3 bg-black rounded-full self-center place-self-end mr-2"></div>
-                <span className="font-bold col-span-2">4 Agents</span>
+              <div className="flex flex-row items-center gap-3">
+                <div className={[styles.glow].join(" ")}></div>
+                <span className="text-sm opacity-50 font">
+                  {agentsCount?.length} online
+                </span>
               </div>
             </div>
           </div>
