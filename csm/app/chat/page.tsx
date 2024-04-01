@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useRef, useState } from "react";
 import {
   MagnifyingGlass,
   Paperclip,
@@ -16,8 +16,10 @@ import MessageCard from "../components/MessageCard";
 import { redirect } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useCollectionData } from "react-firebase-hooks/firestore";
-import { firestore } from "../api/configs/firebaseconfig";
+import { app, firestore } from "../api/configs/firebaseconfig";
 import {
+  addDoc,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -31,7 +33,7 @@ import {
   where,
 } from "firebase/firestore";
 import * as Accordion from "@radix-ui/react-accordion";
-import { CaretDown } from "@phosphor-icons/react";
+import { CaretDown, PaperPlaneTilt } from "@phosphor-icons/react";
 import styles from "./styles.module.css";
 
 function page() {
@@ -39,6 +41,13 @@ function page() {
   const [agentUUID, setUUID] = useState("");
   const router = useRouter();
   const [messagesByUser, setMessagesByUser] = useState<any>(null);
+  const [conversationMessages, setCoversationMessages] = useState([]);
+
+  const [currentConversationId, setCurrentConversationId] = useState("");
+
+  // const dummy = useRef(<HTMLDivElement/>);
+  // Remember to scroll this div into view on message send
+  // if(dummy.current){dummy.current.scrollIntoView({behaviour:'smooth'})}
 
   const q = query(
     collection(firestore, "newMessages"),
@@ -80,19 +89,31 @@ function page() {
     // Check weather the conversation between the two exists if not
     // Create a conversation between the agent and the customer
     // After the conversation has been created, the message should then be deleted from the Messages Document and moved to Conversations
+    let conversationid;
+    let senderid;
 
-    const conversationid = agentUUID + usermessage.userid;
+    if (usermessage.senderuuid) {
+      senderid = usermessage.senderid;
+      conversationid = agentUUID + usermessage.senderuuid;
+    } else {
+      senderid = usermessage.userid;
+      conversationid = agentUUID + usermessage.userid;
+    }
+
+    setCurrentConversationId(conversationid);
 
     try {
-      const docRef = doc(firestore, "conversations", conversationid);
-      const docSnap = await getDoc(docRef);
+      const conversationRef = doc(firestore, "conversations", conversationid);
+      const conversationSnap = await getDoc(conversationRef);
 
-      if (!docSnap.exists()) {
+      if (!conversationSnap.exists()) {
+        console.log(usermessage);
+        console.log("does not exist");
         // create conversation document for the two
-        const res = await setDoc(docRef, {
+        const res = await setDoc(conversationRef, {
           messages: [
             {
-              senderuuid: usermessage.userid,
+              senderuuid: senderid,
               content: usermessage.content,
               timestamp: usermessage.timestamp,
             },
@@ -122,7 +143,7 @@ function page() {
             console.log("Error: " + error);
           });
 
-        let agentChat = await updateDoc(docRef, {
+        let agentChat = await updateDoc(conversationRef, {
           agentuuid: agentUUID,
           senderuuid: usermessage.userid,
           username: usermessage.name,
@@ -131,6 +152,65 @@ function page() {
       }
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const handleChatTransition = (usermessage: any) => {
+    let conversationid;
+    let senderid;
+
+    if (usermessage.senderuuid) {
+      senderid = usermessage.senderid;
+      conversationid = agentUUID + usermessage.senderuuid;
+    } else {
+      senderid = usermessage.userid;
+      conversationid = agentUUID + usermessage.userid;
+    }
+
+    setCurrentConversationId(conversationid);
+
+    //console.log(usermessage);
+  };
+
+  const [messageData, setMessageData] = useState({
+    content: "",
+  });
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.preventDefault();
+
+    const { name, value } = event.target;
+    setMessageData((prevFormData) => ({
+      ...prevFormData,
+      [name]: value,
+    }));
+  };
+
+  const handleMessageSend = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    let newData = {
+      content: messageData.content,
+      senderuuid: agentUUID,
+      timestamp: Date.now(),
+    };
+
+    console.log(newData);
+
+    try {
+      const conversationRef = doc(
+        firestore,
+        "conversations",
+        currentConversationId
+      );
+
+      await updateDoc(conversationRef, { messages: arrayUnion(newData) }).then(
+        () => {
+          console.log("Message Added to database");
+        }
+      );
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -242,7 +322,12 @@ function page() {
 
             {conversations &&
               conversations.map((msg, index) => (
-                <div key={index}>
+                <div
+                  key={index}
+                  onClick={() => {
+                    handleChatTransition(msg);
+                  }}
+                >
                   <MessageCard
                     assigned={true}
                     displayName={msg.username}
@@ -317,22 +402,40 @@ function page() {
         </div>
         <hr style={{ margin: "auto" }} className="opacity-50 w-11/12 p-3" />
         <div id="MessagesBody" className="h-5/6 flex flex-col overflow-y-auto">
-          <Message content="Tester Message" time="3:10 pm" internal={false} />
-          <Message
-            content="Do you mind taking a cab to GitHub HQ?"
-            time="3:21 pm"
-            internal={true}
-          />
-          <Message content="Sure bet" time="3:23 pm" internal={false} />
+          {/* {conversationMessages &&
+            conversationMessages.map((message, index) => {
+              <Message
+                key={index}
+                content={message.content}
+                time={message.timestamp}
+                internal={agentUUID == message.senderuuid}
+              />;
+            })} */}
         </div>
         <div id="InputBox" className="w-11/12 " style={{ margin: "auto" }}>
           <div className="flex flex-row bg-[#1e1f22] rounded-xl p-2">
             <PlusCircle color="#879099" size={28} />
-            <input
-              type="text"
-              className="bg-transparent ml-3 focus:border-0 focus:outline-0 w-11/12"
-              placeholder="Type your message"
-            />
+            <form
+              className="w-11/12 flex flex-row items-center"
+              onSubmit={handleMessageSend}
+            >
+              <input
+                name="content"
+                type="text"
+                className="bg-transparent ml-3 focus:border-0 focus:outline-0 w-11/12"
+                placeholder="Type your message"
+                onChange={handleInputChange}
+                value={messageData.content}
+              />
+              <button className="ml-4" type="submit">
+                <PaperPlaneTilt
+                  className=""
+                  color="#879099"
+                  weight="fill"
+                  size={28}
+                />
+              </button>
+            </form>
 
             <div className="flex flex-row">
               <Smiley className="mr-3" color="#879099" size={28} />
