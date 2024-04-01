@@ -24,6 +24,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
@@ -34,6 +35,27 @@ import {
 import * as Accordion from "@radix-ui/react-accordion";
 import { CaretDown, PaperPlaneTilt } from "@phosphor-icons/react";
 import styles from "./styles.module.css";
+
+const fetchConversation = (
+  setConversationMessages: any,
+  currentconversationId: any
+) => {
+  const conversationMessageRef = collection(firestore, "conversations");
+
+  // currentconversationId
+  const q = query(conversationMessageRef);
+
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const messagesArray: any = [];
+    querySnapshot.forEach((doc) => {
+      if (doc.id == currentconversationId) {
+        messagesArray.push({ ...doc.data(), id: doc.id });
+      }
+    });
+    setConversationMessages(messagesArray);
+  });
+  return unsubscribe;
+};
 
 function page() {
   const [agentname, setName] = useState("");
@@ -80,7 +102,14 @@ function page() {
     };
 
     getMessages();
-  }, []);
+
+    const unsubscribe = fetchConversation(
+      setCoversationMessages,
+      currentConversationId
+    );
+
+    return () => unsubscribe();
+  }, [currentConversationId]);
 
   const q2 = query(
     collection(firestore, "conversations"),
@@ -110,8 +139,6 @@ function page() {
       const conversationSnap = await getDoc(conversationRef);
 
       if (!conversationSnap.exists()) {
-        console.log(usermessage);
-        console.log("does not exist");
         // create conversation document for the two
         const res = await setDoc(conversationRef, {
           messages: [
@@ -171,8 +198,6 @@ function page() {
     }
 
     setCurrentConversationId(conversationid);
-
-    //console.log(usermessage);
   };
 
   const [messageData, setMessageData] = useState({
@@ -198,8 +223,6 @@ function page() {
       timestamp: Date.now(),
     };
 
-    console.log(newData);
-
     try {
       const conversationRef = doc(
         firestore,
@@ -207,11 +230,7 @@ function page() {
         currentConversationId
       );
 
-      await updateDoc(conversationRef, { messages: arrayUnion(newData) }).then(
-        () => {
-          console.log("Message Added to database");
-        }
-      );
+      await updateDoc(conversationRef, { messages: arrayUnion(newData) });
     } catch (error) {
       console.log(error);
     }
@@ -236,7 +255,26 @@ function page() {
     }
   };
 
-  // Messages fetch
+  const conversationItems = conversationMessages.map((convo, index) => {
+    const messagesArray = convo["messages"] as Chat[];
+
+    type Chat = {
+      content: string;
+      internal: boolean;
+      senderuuid: string;
+      timestamp: string;
+    };
+
+    const messageItems = messagesArray.map((message, messageIndex) => (
+      <Message
+        content={message["content"]}
+        time={message["timestamp"]}
+        internal={message["senderuuid"] == agentUUID}
+      />
+    ));
+
+    return messageItems;
+  });
 
   return (
     <div className="grid grid-cols-4 h-full p-4 bg-[#1e1f22]">
@@ -404,15 +442,7 @@ function page() {
         </div>
         <hr style={{ margin: "auto" }} className="opacity-50 w-11/12 p-3" />
         <div id="MessagesBody" className="h-5/6 flex flex-col overflow-y-auto">
-          {/* {conversationMessages &&
-            conversationMessages.map((message, index) => {
-              <Message
-                key={index}
-                content={message.content}
-                time={message.timestamp}
-                internal={agentUUID == message.senderuuid}
-              />;
-            })} */}
+          {conversationItems}
         </div>
         <div id="InputBox" className="w-11/12 " style={{ margin: "auto" }}>
           <div className="flex flex-row bg-[#1e1f22] rounded-xl p-2">
