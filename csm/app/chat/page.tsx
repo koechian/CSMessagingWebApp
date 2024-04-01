@@ -7,17 +7,45 @@ import {
   Smiley,
   PlusCircle,
   SignOut,
+  Tray,
 } from "@phosphor-icons/react/dist/ssr";
 
 import Image from "next/image";
 import Message from "../components/Message";
+import MessageCard from "../components/MessageCard";
 import { redirect } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { useCollectionData } from "react-firebase-hooks/firestore";
+import { firestore } from "../api/configs/firebaseconfig";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from "firebase/firestore";
+import * as Accordion from "@radix-ui/react-accordion";
+import { CaretDown } from "@phosphor-icons/react";
+import styles from "./styles.module.css";
 
 function page() {
   const [agentname, setName] = useState("");
   const [agentUUID, setUUID] = useState("");
   const router = useRouter();
+  const [messagesByUser, setMessagesByUser] = useState<any>(null);
+
+  const q = query(
+    collection(firestore, "newMessages"),
+    orderBy("timestamp", "asc")
+  );
+
+  const [messages] = useCollectionData(q);
 
   useEffect(() => {
     if (!sessionStorage.getItem("UUID")) {
@@ -31,11 +59,82 @@ function page() {
       setName(name);
       setUUID(uuid);
     }
+
+    const getMessages = async () => {
+      const messages = (
+        await fetch("/api/fetchMessages", { method: "POST" })
+      ).json();
+      setMessagesByUser(await messages);
+    };
+
+    getMessages();
   }, []);
 
-  const logout = async () => {
-    // implement api request to delete the agent from the database
+  const q2 = query(
+    collection(firestore, "conversations"),
+    where("agentuuid", "==", agentUUID)
+  );
+  const [conversations] = useCollectionData(q2);
 
+  const transitionChat = async (usermessage: any) => {
+    // Check weather the conversation between the two exists if not
+    // Create a conversation between the agent and the customer
+    // After the conversation has been created, the message should then be deleted from the Messages Document and moved to Conversations
+
+    const conversationid = agentUUID + usermessage.userid;
+
+    try {
+      const docRef = doc(firestore, "conversations", conversationid);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        // create conversation document for the two
+        const res = await setDoc(docRef, {
+          messages: [
+            {
+              senderuuid: usermessage.userid,
+              content: usermessage.content,
+              timestamp: usermessage.timestamp,
+            },
+          ],
+        });
+
+        // delete the message from the Messages Document
+        let newMessageRef = collection(firestore, "newMessages");
+        let q = query(
+          newMessageRef,
+          where("messageid", "==", usermessage.messageid)
+        );
+
+        getDocs(q)
+          .then((snapshot) => {
+            snapshot.forEach((doc) => {
+              deleteDoc(doc.ref)
+                .then(() => {
+                  console.log("Message Deleted from newMessages");
+                })
+                .catch((error) => {
+                  console.log("Error: " + error);
+                });
+            });
+          })
+          .catch((error) => {
+            console.log("Error: " + error);
+          });
+
+        let agentChat = await updateDoc(docRef, {
+          agentuuid: agentUUID,
+          senderuuid: usermessage.userid,
+          username: usermessage.name,
+          timestarted: serverTimestamp(),
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const logout = async () => {
     let data = {
       uuid: sessionStorage.getItem("UUID"),
       documentId: sessionStorage.getItem("DBID"),
@@ -60,7 +159,7 @@ function page() {
     <div className="grid grid-cols-4 h-full p-4 bg-[#1e1f22]">
       <div
         id="leftPane"
-        className="h-full flex flex-col justify-center col-span-1"
+        className="h-full flex flex-col justify-center col-span-1 overflow-hidden"
       >
         <div id="appName" className="p-4 flex mb-2">
           <svg
@@ -85,9 +184,9 @@ function page() {
 
         <div
           id="conversations"
-          className="flex flex-row justify-center mt-2 h-full"
+          className="flex flex-col mt-2 h-full items-center overflow-hidden"
         >
-          <div id="Search Box" className="mb-4 w-9/12">
+          <div id="Search Box" className="mb-4 w-10/12">
             <div
               className="flex items-center p-2 bg-[#2b2d31] justify-start rounded-xl"
               id="SearchBox"
@@ -99,6 +198,58 @@ function page() {
                 placeholder="Search Here"
               />
             </div>
+          </div>
+          <div className="w-10/12 h-full overflow-y-auto">
+            <Accordion.Root type="single" collapsible>
+              <Accordion.Item value="item-1">
+                <Accordion.Trigger
+                  className={[
+                    styles.AccordionTrigger,
+                    "flex flex-row",
+                    "hover:bg-[#2b2d31]",
+                    "rounded-xl",
+                    "hover:cursor-pointer",
+                    "py-4",
+                    "w-full",
+                    "items-center",
+                  ].join(" ")}
+                >
+                  <Tray size={24} color="#72B01D" />
+                  <span className="ml-3 mr-2 font-bold">
+                    Unassigned Messages
+                  </span>
+                  <CaretDown
+                    className={styles.AccordionChevron}
+                    style={{ transition: "300ms" }}
+                    aria-hidden
+                    size={18}
+                  ></CaretDown>
+                </Accordion.Trigger>
+                <Accordion.Content className={styles.AccordionContent}>
+                  {messages &&
+                    messages.map((msg, index) => (
+                      <div key={msg.userid} onClick={() => transitionChat(msg)}>
+                        <MessageCard
+                          assigned={false}
+                          displayName={msg.name}
+                          content={msg.content}
+                        />
+                      </div>
+                    ))}
+                </Accordion.Content>
+              </Accordion.Item>
+            </Accordion.Root>
+
+            {conversations &&
+              conversations.map((msg, index) => (
+                <div key={index}>
+                  <MessageCard
+                    assigned={true}
+                    displayName={msg.username}
+                    content={msg.messages[0]["content"]}
+                  />
+                </div>
+              ))}
           </div>
         </div>
         <hr style={{ margin: "auto" }} className="opacity-50 w-10/12 p-3" />
