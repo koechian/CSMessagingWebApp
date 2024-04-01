@@ -35,6 +35,7 @@ import {
 import * as Accordion from "@radix-ui/react-accordion";
 import { CaretDown, PaperPlaneTilt } from "@phosphor-icons/react";
 import styles from "./styles.module.css";
+import Avatar from "boring-avatars";
 
 const fetchConversation = (
   setConversationMessages: any,
@@ -65,6 +66,7 @@ function page() {
   const [conversationMessages, setCoversationMessages] = useState([]);
 
   const [currentConversationId, setCurrentConversationId] = useState("");
+  const [currentUsername, setCurrentUsername] = useState("");
 
   // const dummy = useRef(<HTMLDivElement/>);
   // Remember to scroll this div into view on message send
@@ -198,6 +200,7 @@ function page() {
     }
 
     setCurrentConversationId(conversationid);
+    setCurrentUsername(usermessage.username);
   };
 
   const [messageData, setMessageData] = useState({
@@ -267,6 +270,7 @@ function page() {
 
     const messageItems = messagesArray.map((message, messageIndex) => (
       <Message
+        key={messageIndex}
         content={message["content"]}
         time={message["timestamp"]}
         internal={message["senderuuid"] == agentUUID}
@@ -412,17 +416,24 @@ function page() {
         <div id="TopPanel">
           <div id="contactInfo" className="grid grid-cols-3 items-center p-4">
             <div className="rounded-xl col-span-2 flex flex-row">
-              <Image
-                className="mr-5"
-                src="/krusha.png"
-                height={56}
-                width={56}
-                alt="User Profile Image"
-              ></Image>
+              <div className="mr-5">
+                <Avatar
+                  size={56}
+                  name={currentUsername}
+                  variant="beam"
+                  colors={[
+                    "#A7C5BD",
+                    "#E5DDCB",
+                    "#EB7B59",
+                    "#CF4647",
+                    "#524656",
+                  ]}
+                />
+              </div>
 
               <div>
                 <span className={["text-xl font-bold"].join("")}>
-                  Grusha Vashnadze
+                  {currentUsername}
                 </span>
                 <br />
                 <span className="font-semibold opacity-70">
