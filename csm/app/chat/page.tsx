@@ -272,7 +272,7 @@ function page() {
       <Message
         key={messageIndex}
         content={message["content"]}
-        time={message["timestamp"]}
+        time={new Date(parseInt(message["timestamp"]) * 1000).toTimeString()}
         internal={message["senderuuid"] == agentUUID}
       />
     ));
