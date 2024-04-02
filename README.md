@@ -2,6 +2,12 @@
 
 A messaging web application built as a take away assignment for Branch International Junior Backend Role.
 
+- running this on an unconfigured machine: \
+  `cd csm` \
+  `npm install` \
+  `npm run dev`
+- The app should be available on localhost:3000
+
 ## Key Facets
 
 ### 1. Agents
